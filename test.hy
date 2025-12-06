@@ -1,1 +1,3 @@
-return 69;
+let x = 420;
+let y = x;
+exit(x);

@@ -5,11 +5,7 @@
 
 // hydrogen language tokens
 enum class TokenType
-{
-    exit,
-    int_lit,
-    semi
-};
+{exit, open_paren, close_paren, eq, int_lit, ident, let, semi };
 
 struct Token
 {
@@ -30,45 +26,61 @@ public:
         using namespace std;
         vector<Token> tokens;
         string buf;
-        while(peak().has_value())
+        while(peek().has_value())
         {
-            if(isalpha(peak().value()))
+            if(isalpha(peek().value()))
             {
                 buf.push_back(consume());
-                while(peak().has_value() && isalnum(peak().value()))
+                while(peek().has_value() && isalnum(peek().value()))
                     buf.push_back(consume());
 
                 if (buf == "exit")
                 {
                     tokens.push_back({.type = TokenType::exit});
                     buf.clear();
-                    continue;
+                }
+                else if (buf == "let")
+                {
+                    tokens.push_back({.type = TokenType::let});
+                    buf.clear();
                 }
                 else
                 {
-                    cerr << "You messed up! ALPHANUMERIC" << endl;
-                    exit(EXIT_FAILURE);
+                    tokens.push_back({.type = TokenType::ident, .value = buf});
+                    buf.clear();
                 }
             }
-            else if (isdigit(peak().has_value()))
+            else if (isdigit(peek().value()))
             {
                 buf.push_back(consume());
-                while(peak().has_value() && isdigit(peak().has_value()))
+                while(peek().has_value() && isdigit(peek().value()))
                     buf.push_back(consume());
-                tokens.push_back({ .type = TokenType::int_lit, .value = buf });
+                tokens.push_back({.type = TokenType::int_lit, .value = buf});
                 buf.clear();
-                continue;
             }
-            else if (peak().value() == ';')
+            else if (peek().value() == '=')
             {
                 consume();
-                tokens.push_back({ .type = TokenType::semi});
-                continue;
+                tokens.push_back({.type = TokenType::eq});
             }
-            else if(isspace(peak().value()))
+            else if (peek().value() == '(')
             {
                 consume();
-                continue;
+                tokens.push_back({.type = TokenType::open_paren});
+            }
+            else if (peek().value() == ')')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::close_paren});
+            }
+            else if (peek().value() == ';')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::semi});
+            }
+            else if(isspace(peek().value()))
+            {
+                consume();
             }
             else
             {
@@ -78,6 +90,7 @@ public:
         }
 
         // WIP, I believe we still have to get the col number
+        // at least for debugging purposes
         m_index = 0;
         return tokens;
     }
@@ -85,16 +98,14 @@ public:
 private:
     // peeking used to match the largest matching tokens.
     // Useful to differ tokens with similar values or chars
-    [[nodiscard]] std::optional<char> peak(int ahead = 1) const
+    [[nodiscard]] std::optional<char> peek(int offset = 0) const
     {
-        if (m_index + ahead > m_src.length())
+        if (m_index + offset >= m_src.length())
         {
             return {};
         }
-        else
-        {
-            return m_src.at(m_index);
-        }
+
+        return m_src.at(m_index + offset);
     }
 
     char consume()
@@ -105,5 +116,5 @@ private:
     // program source
     const std::string m_src;
     // m_src current index
-    int m_index = 0;
+    size_t m_index = 0;
 };
