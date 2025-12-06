@@ -1,5 +1,5 @@
 /build/
 /notes
-/*.asm
+/out*
 /cmake*/
 /.idea/

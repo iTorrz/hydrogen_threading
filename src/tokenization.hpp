@@ -5,7 +5,7 @@
 
 // hydrogen language tokens
 enum class TokenType
-{exit, open_paren, close_paren, eq, int_lit, ident, let, semi };
+{exit, open_paren, close_paren, eq, plus, int_lit, ident, let, semi };
 
 struct Token
 {
@@ -15,13 +15,13 @@ struct Token
 
 class Tokenizer {
 public:
-    inline explicit Tokenizer(std::string src)
+     explicit Tokenizer(std::string src)
         : m_src(std::move(src))
     {
 
     }
 
-    inline std::vector<Token> tokenize()
+     std::vector<Token> tokenize()
     {
         using namespace std;
         vector<Token> tokens;
@@ -46,6 +46,8 @@ public:
                 }
                 else
                 {
+                    // this does not differ identifiers that already exist...
+                    //is that a job for the generator the handle?
                     tokens.push_back({.type = TokenType::ident, .value = buf});
                     buf.clear();
                 }
@@ -62,6 +64,11 @@ public:
             {
                 consume();
                 tokens.push_back({.type = TokenType::eq});
+            }
+            else if (peek().value() == '+')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::plus});
             }
             else if (peek().value() == '(')
             {

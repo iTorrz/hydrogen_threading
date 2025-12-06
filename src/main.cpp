@@ -6,7 +6,6 @@
 
 #include "./generation.hpp"
 
-
 // main will consume characters from test.hy to create tokens
 int main(int argc, char* argv[]) {
     // If we do not use std identifiers in function scopes, make this global.
