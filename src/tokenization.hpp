@@ -5,7 +5,7 @@
 
 // hydrogen language tokens
 enum class TokenType
-{exit, open_paren, close_paren, eq, plus, int_lit, ident, let, semi };
+{exit, open_paren, close_paren, eq, plus, int_lit, ident, let, start, semi, pipe};
 
 struct Token
 {
@@ -31,8 +31,12 @@ public:
             if(isalpha(peek().value()))
             {
                 buf.push_back(consume());
-                while(peek().has_value() && isalnum(peek().value()))
+                // identifers can begin with `_`
+                while(peek().has_value() &&
+                    (isalnum(peek().value()) || peek().value() == '_'))
+                {
                     buf.push_back(consume());
+                }
 
                 if (buf == "exit")
                 {
@@ -44,10 +48,13 @@ public:
                     tokens.push_back({.type = TokenType::let});
                     buf.clear();
                 }
+                else if (buf == "start_workers")
+                {
+                    tokens.push_back({.type = TokenType::start});
+                    buf.clear();
+                }
                 else
                 {
-                    // this does not differ identifiers that already exist...
-                    //is that a job for the generator the handle?
                     tokens.push_back({.type = TokenType::ident, .value = buf});
                     buf.clear();
                 }
@@ -84,6 +91,13 @@ public:
             {
                 consume();
                 tokens.push_back({.type = TokenType::semi});
+            }
+            else if (peek().value() == '|' && peek(1).has_value() && peek(1).value() == '|')
+            {
+                //consume both || values
+                consume();
+                consume();
+                tokens.push_back({.type = TokenType::pipe});
             }
             else if(isspace(peek().value()))
             {

@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <unordered_map>
+#include <unordered_set>
+
 #include "parser.hpp"
 
 class Generator
@@ -94,6 +96,8 @@ class Generator
             std::cerr << "Identifier already used " << stmt_let->ident.value.value() << std::endl;
             exit(EXIT_FAILURE);
           }
+          //TODO WIP, no manner to pop of local scope of stack
+
           // evaluate expression for variable assignment
           gen->m_vars.insert({stmt_let->ident.value.value(), Var {.stack_loc = gen->m_stack_size}});
           gen->gen_expr(stmt_let->expr);
@@ -127,13 +131,40 @@ class Generator
 
 
     [[nodiscard]] std::string gen_prog()
-      {
-        m_output << "global _start\n_start:\n";
-        for (const NodeStmt *stmt : m_prog.stmts)
-          gen_stmt(stmt);
+     {
+       if (m_prog.workers.size() > 0)
+       {
+         this->worker_state = true;
+         m_output << "default rel\n";
+         m_output << "section .text\n";
+         m_output << "    global main\n";
+         m_output << "    extern pthread_create\n";
+         m_output << "    extern pthread_join\n";
 
-        return m_output.str();
-      }
+         // undeclared thread ids
+         m_output << "section .bss\n";
+         m_output << "    thread_ids: resq " << m_prog.workers.size() << "\n";
+         //TODO name global identifiers here, just declared not init
+         // // I might just have to declare the global value here,
+         // // with a rel tag in assembly and a set of all global variables
+         // // TODO remove data and replace with .bss init
+         // //global shared data, how can I ensure that there are no duplicates?
+         // m_output << "section .data\n";
+         // for (const NodeStmt *stmt : m_prog.stmts)
+         //   gen_stmt(stmt);
+
+         // once done with intializing global values,
+         // make worker_state false so that we know
+         // that we are doing regular statements now
+         return m_output.str();
+       }
+
+       m_output << "global _start\n_start:\n";
+       for (const NodeStmt *stmt : m_prog.stmts)
+         gen_stmt(stmt);
+
+       return m_output.str();
+     }
 
 
   private:
@@ -151,16 +182,23 @@ class Generator
         m_stack_size--;
       }
 
-      // NOTE: this could include "types", but for this project int
-      // literals are enough to test asm threading
+      // could include "types", int literals are enough to test asm threading
       struct Var
       {
-        size_t stack_loc;
+        bool is_global = false;
+        size_t stack_loc = 0;
       };
 
       const NodeProg m_prog;
       std::stringstream m_output;
       size_t m_stack_size = 0;
+      bool worker_state = false;
+      // for future reference I would have to include a set with worker names,
+      // but for time constraints I will not
+      //TODO when can!
       //program variables
+      //NOTE: if we have locals, we are going to have to pop them of the stack whenever we get around to that
       std::unordered_map<std::string, Var> m_vars {};
-};
+      // for global vars
+      std::unordered_set<std::string> m_global_vars {};
+    };

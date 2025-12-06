@@ -8,8 +8,6 @@
 
 // main will consume characters from test.hy to create tokens
 int main(int argc, char* argv[]) {
-    // If we do not use std identifiers in function scopes, make this global.
-    // If that causes weird behavior, revert to local namespace
     using namespace std;
     if (argc != 2)
     {
@@ -45,8 +43,8 @@ int main(int argc, char* argv[]) {
 
     cout << "Code Generation Complete" << endl;
 
-    system("nasm -felf64 out.asm");
-    system("ld -o out out.o");
+    system("nasm -felf64 out.asm -o out.o");
+    system("gcc -no-pie -o out out.o -pthread");
 
     return EXIT_SUCCESS;
 }

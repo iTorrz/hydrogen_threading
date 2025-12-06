@@ -1,6 +1,5 @@
 #pragma once
 
-#include <complex>
 #include <vector>
 #include "tokenization.hpp"
 #include <variant>
@@ -45,7 +44,6 @@ struct NodeTerm
 
 struct NodeExpr
 {
-    // variant is able to decide which type specified
     std::variant<NodeTerm*, NodeBinExpr*> var;
 };
 
@@ -66,14 +64,23 @@ struct NodeStmtAssign
     NodeExpr* expr;
 };
 
+struct NodeStmtStart{};
+
 struct NodeStmt
 {
-    std::variant<NodeStmtExit*, NodeStmtLet*,NodeStmtAssign*> var;
+    std::variant<NodeStmtExit*, NodeStmtLet*,NodeStmtAssign*,NodeStmtStart*> var;
+};
+
+struct NodeWorker
+{
+    Token ident;
+    std::vector<NodeStmt*> body;
 };
 
 struct NodeProg
 {
     std::vector<NodeStmt*> stmts;
+    std::vector<NodeWorker*> workers;
 };
 
 class Parser
@@ -164,7 +171,7 @@ public:
             return stmt;
         }
         // check for identifiers initialization
-        else if (peek().value().type == TokenType::let &&
+        if (peek().value().type == TokenType::let &&
                 peek(1).has_value() && peek(1).value().type == TokenType::ident &&
                 peek(2).has_value() && peek(2).value().type == TokenType::eq)
         {
@@ -186,8 +193,6 @@ public:
             stmt->var = stmt_let;
             return stmt;
         }
-         // check for an identifier, should I create a new node type for the generator?
-         // I think that we do have to make a new struct
          if(peek().value().type == TokenType::ident &&
                 peek(1).has_value() && peek(1).value().type == TokenType::eq)
          {
@@ -208,8 +213,57 @@ public:
              stmt->var = stmt_assign;
              return stmt;
          }
+         if(peek().value().type == TokenType::start &&
+             peek(1).has_value() && peek(1).value().type == TokenType::open_paren &&
+             peek(2).has_value() && peek(2).value().type == TokenType::close_paren)
+         {
+             consume();
+             consume();
+             consume();
+             try_consume(TokenType::semi, "Expected `;`");
+             auto stmt_start = m_allocator.alloc<NodeStmtStart>();
+             auto stmt = m_allocator.alloc<NodeStmt>();
+             stmt->var = stmt_start;
+             return stmt;
+         }
         return {};
     }
+
+    std::optional<NodeWorker*> parse_worker()
+     {
+         if (peek().value().type == TokenType::pipe &&
+             peek(1).has_value() && peek(1).value().type == TokenType::ident)
+         {
+             consume();
+             auto worker = m_allocator.alloc<NodeWorker>();
+             worker->ident = consume();
+             std::vector <NodeStmt*> stmts;
+
+             while(peek().has_value())
+             {
+                 if (auto stmt = parse_stmt())
+                    stmts.push_back(stmt.value());
+                 // if not a statement, check if it is a pipeline, and break
+                 else if (peek().value().type == TokenType::pipe)
+                 {
+                     consume();
+                     break;
+                 }
+                 else
+                     return {};
+             }
+
+             // a chance there are no statements
+             if (stmts.empty())
+              {
+                 std::cerr << "No body for worker" << std::endl;
+                 exit(EXIT_FAILURE);
+              }
+             worker->body = stmts;
+             return worker;
+         }
+         return {};
+     }
 
     std::optional<NodeProg> parse_prog()
     {
@@ -217,7 +271,11 @@ public:
         NodeProg prog;
         while(peek().has_value())
         {
-            if (auto stmt = parse_stmt())
+            if (auto worker = parse_worker())
+            {
+                prog.workers.push_back(worker.value());
+            }
+            else if (auto stmt = parse_stmt())
             {
                 prog.stmts.push_back(stmt.value());
             }
@@ -227,9 +285,8 @@ public:
                 exit(EXIT_FAILURE);
             }
         }
-        // is this still needed?
-        m_index = 0;
-        return prog;
+
+         return prog;
     }
 
 private:
