@@ -50,7 +50,7 @@ Originally, hydrogen supported both global and local variable declarations.
 However, I found it really difficult to manage locals in a multithreaded environment required stack-frame bookkeeping, offset tracking, and correct teardown of scopes. This just caused unstable behavior when running the generated assembly, so I decided to leave it out for this moment. Thankfully this stabilized shared-memory and all user-defined variables are now treated as shared globals in .bss.
 ### Incorrect Section Placement
 I hit several segmentation faults early on because I didn’t fully understand how NASM sections work. I was accidentally emitting main and worker instructions while still in the .bss section, which is meant only for uninitialized data. This caused NASM warnings and immediate crashes at runtime. I resolved these issues, but why many headaches.
-###Calling Conventions and Expression Stack Management
+### Calling Conventions and Expression Stack Management
 Lastly, calling conventions and register handling gave me trouble at first. Getting pthread_create’s arguments into the right registers and avoiding accidental clobbering took some trial and error. My stack use in the final design is pretty barebones—since I’m not dealing with local stack frames yet, the stack is mostly used for temporary expression handling and reading values for shared memory operations.
 
 ## Building
