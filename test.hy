@@ -1,7 +1,7 @@
-let x = 0;
-let y = 0;
-let a = 0;
-let b = 0;
+global let x = 0;
+global let y = 0;
+global let a = 0;
+global let b = 0;
 
 || worker_1
 x = 1;

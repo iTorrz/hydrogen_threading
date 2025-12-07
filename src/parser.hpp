@@ -58,6 +58,12 @@ struct NodeStmtLet
     NodeExpr* expr;
 };
 
+struct NodeGlobalStmtLet
+{
+    Token ident;
+    NodeExpr* expr;
+};
+
 struct NodeStmtAssign
 {
     Token ident;
@@ -68,7 +74,7 @@ struct NodeStmtStart{};
 
 struct NodeStmt
 {
-    std::variant<NodeStmtExit*, NodeStmtLet*,NodeStmtAssign*,NodeStmtStart*> var;
+    std::variant<NodeStmtExit*, NodeStmtLet*, NodeGlobalStmtLet*, NodeStmtAssign*,NodeStmtStart*> var;
 };
 
 struct NodeWorker
@@ -170,6 +176,30 @@ public:
             stmt->var = stmt_exit;
             return stmt;
         }
+         if (peek().value().type == TokenType::global &&
+                peek(1).has_value() && peek(1).value().type == TokenType::let &&
+                peek(2).has_value() && peek(2).value().type == TokenType::ident &&
+                peek(3).has_value() && peek(3).value().type == TokenType::eq)
+         {
+             consume();
+             consume();
+             auto global_stmt_let = m_allocator.alloc<NodeGlobalStmtLet>();
+             global_stmt_let->ident = consume();
+             consume();
+             if (auto expr = parse_expr())
+             {
+                 global_stmt_let->expr = expr.value();
+             }
+             else
+             {
+                 // for future reference will have to include var name
+                 cerr << "Invalid expression for var init" << endl;
+             }
+             try_consume(TokenType::semi, "Expected `;`");
+             auto stmt = m_allocator.alloc<NodeStmt>();
+             stmt->var = global_stmt_let;
+             return stmt;
+         }
         // check for identifiers initialization
         if (peek().value().type == TokenType::let &&
                 peek(1).has_value() && peek(1).value().type == TokenType::ident &&

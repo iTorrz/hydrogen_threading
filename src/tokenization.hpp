@@ -5,7 +5,7 @@
 
 // hydrogen language tokens
 enum class TokenType
-{exit, open_paren, close_paren, eq, plus, int_lit, ident, let, start, semi, pipe};
+{exit, open_paren, close_paren, eq, plus, int_lit, ident, global, let, start, semi, pipe};
 
 struct Token
 {
@@ -41,6 +41,11 @@ public:
                 if (buf == "exit")
                 {
                     tokens.push_back({.type = TokenType::exit});
+                    buf.clear();
+                }
+                else if (buf == "global")
+                {
+                    tokens.push_back({.type = TokenType::global});
                     buf.clear();
                 }
                 else if (buf == "let")
